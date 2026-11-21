@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RESQ · Blackout Station</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div id="flash" class="flash" aria-hidden="true"></div>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">✚</span>
+    <div>
+      <div class="brand-name">RESQ <span class="muted">Blackout Station</span></div>
+      <div class="brand-sub" id="station-line">loading…</div>
+    </div>
+  </div>
+  <div class="stats" aria-live="polite">
+    <div class="stat stat-main"><b id="s-active">–</b><span data-i18n="stat.active">on site now</span></div>
+    <div class="stat"><b id="s-in">–</b><span data-i18n="stat.in">check-ins</span></div>
+    <div class="stat"><b id="s-out">–</b><span data-i18n="stat.out">check-outs</span></div>
+    <div class="stat"><b id="s-walkin">–</b><span data-i18n="stat.walkin">walk-ins</span></div>
+    <div class="stat stat-warn"><b id="s-rej">–</b><span data-i18n="stat.rej">rejected</span></div>
+    <div class="stat"><b id="s-pending">–</b><span data-i18n="stat.pending">not uploaded</span></div>
+  </div>
+  <div class="clock">
+    <div class="lang" role="group" aria-label="Language / Sprache">
+      <button type="button" data-lang="en" class="active">EN</button><button type="button" data-lang="de">DE</button>
+    </div>
+    <button type="button" id="sound-btn" class="sound-btn">🔊</button>
+    <div id="clock">--:--:--</div><div class="badge" id="rec-badge">● recording locally</div>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab active" data-tab="desk" role="tab"><span data-i18n="tab.desk">Check-in / out</span> <kbd>F1</kbd></button>
+  <button class="tab" data-tab="walkin" role="tab"><span data-i18n="tab.walkin">Walk-in</span> <kbd>F2</kbd></button>
+  <button class="tab" data-tab="phone" role="tab"><span data-i18n="tab.phone">Phone</span> <kbd>F3</kbd></button>
+  <button class="tab" data-tab="paper" role="tab"><span data-i18n="tab.paper">Import paper</span> <kbd>F4</kbd></button>
+  <button class="tab" data-tab="finder" role="tab"><span data-i18n="tab.finder">Find helper</span> <kbd>F5</kbd></button>
+  <button class="tab" data-tab="dash" role="tab" data-i18n="tab.dash">Dashboard</button>
+  <button class="tab" data-tab="log" role="tab" data-i18n="tab.log">Activity log</button>
+  <button class="tab" data-tab="sync" role="tab" data-i18n="tab.sync">Sync</button>
+  <button class="tab" data-tab="ready" role="tab" data-i18n="tab.ready">Readiness</button>
+</nav>
+
+<div id="setup-warning" class="banner banner-bad" hidden data-i18n="setup.warning">
+  Station not initialised: no genesis entry yet. See README → “Set up the live station”.
+</div>
+
+<main>
+  <!-- ============================================================ CHECK-IN / OUT -->
+  <section class="panel active" id="tab-desk">
+    <div class="desk">
+      <div class="desk-main">
+        <label for="code" class="big-label" data-i18n="desk.label">Code or walk-in ID</label>
+        <input id="code" class="code-input" autocomplete="off" spellcheck="false" autocapitalize="characters"
+               placeholder="ABC-123" maxlength="16" autofocus>
+        <div class="actions">
+          <button id="btn-in" class="btn btn-in"><span data-i18n="desk.in">Check in</span> <kbd>Enter</kbd></button>
+          <button id="btn-out" class="btn btn-out"><span data-i18n="desk.out">Check out</span> <kbd>Shift+Enter</kbd></button>
+        </div>
+        <div id="feedback" class="feedback idle" role="status" aria-live="assertive">Ready. Type a code and press Enter.</div>
+        <h3 data-i18n="desk.recent">Recent actions</h3>
+        <ul id="recent" class="recent"></ul>
+      </div>
+      <aside class="desk-side">
+        <h3><span data-i18n="desk.onsite">On site now</span> <span class="pill" id="active-count2">0</span></h3>
+        <p class="hint small-hint" data-i18n="desk.onsite.hint">Click a person, then Check out (or Shift+Enter).</p>
+        <input id="active-filter" class="filter" placeholder="Filter…" data-i18n-ph="desk.filter">
+        <ul id="active-list" class="people"></ul>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============================================================ WALK-IN -->
+  <section class="panel" id="tab-walkin">
+    <div class="card form-card">
+      <h2><span data-i18n="walkin.title">Register a walk-in</span> <span class="muted" id="next-wid"></span></h2>
+      <p class="hint" data-i18n="walkin.hint">A walk-in registration also counts as check-in. Only ask what is needed.</p>
+      <label for="w-name" data-i18n="walkin.name">Name</label>
+      <input id="w-name" autocomplete="off">
+      <label data-i18n="walkin.role">Role (as the person states it; not verified)</label>
+      <div class="roles" id="w-role">
+        <button type="button" class="role role-gruen" data-role="gruen">gruen<small data-i18n="role.gruen">volunteer</small></button>
+        <button type="button" class="role role-gelb" data-role="gelb">gelb<small data-i18n="role.gelb">skilled worker</small></button>
+        <button type="button" class="role role-rot" data-role="rot">rot<small data-i18n="role.rot">specialist</small></button>
+      </div>
+      <label for="w-skill" data-i18n="walkin.skill">Skill (optional)</label>
+      <input id="w-skill" autocomplete="off" placeholder="e.g. Pflegefachkraft" data-i18n-ph="walkin.skill.ph">
+      <div class="consent">
+        <p><b><span data-i18n="walkin.consent">Consent</span> (<span data-i18n="walkin.version">version</span> <span id="consent-version">1.0</span>):</b>
+        <span data-i18n="walkin.consent.text">“Your name, role and skill are stored at this station and transferred to the
+        coordination centre to organise the emergency response. Do you agree?”</span></p>
+        <label class="check"><input type="checkbox" id="w-consent"> <span data-i18n="walkin.agrees">The person agrees</span></label>
+      </div>
+      <div class="actions">
+        <button id="w-submit" class="btn btn-in" data-i18n="walkin.submit">Register &amp; check in</button>
+        <button id="w-decline" class="btn btn-ghost" data-i18n="walkin.decline">Person declines consent</button>
+      </div>
+      <div id="w-feedback" class="feedback idle" role="status" aria-live="assertive"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ PHONE -->
+  <section class="panel" id="tab-phone">
+    <div class="phone-grid">
+      <div class="card challenge-card">
+        <div class="muted" data-i18n="phone.show">Show this to the helper — live station challenge</div>
+        <div id="challenge" class="challenge">····</div>
+        <div class="muted"><span data-i18n="phone.changes">changes in</span> <span id="challenge-ttl">–</span> <span data-i18n="phone.expire">s · old codes expire after 90 s</span></div>
+        <p class="hint" data-i18n-html="phone.hint">Helper opens <b>/phone</b> on their phone (station Wi-Fi), types their code and this
+          challenge, and shows you the pass.</p>
+      </div>
+      <div class="card form-card">
+        <h2 data-i18n="phone.title">Phone check-in</h2>
+        <label for="p-code" data-i18n="phone.code">Code on the pass</label>
+        <input id="p-code" class="code-input small" autocomplete="off" placeholder="ABC-123">
+        <label for="p-challenge" data-i18n="phone.challenge">Challenge on the pass</label>
+        <input id="p-challenge" class="code-input small" autocomplete="off" maxlength="8" placeholder="····">
+        <div class="actions"><button id="p-submit" class="btn btn-in" data-i18n="phone.submit">Verify &amp; check in</button></div>
+        <div id="p-feedback" class="feedback idle" role="status" aria-live="assertive"></div>
+        <p class="hint" data-i18n-html="phone.note">A screenshot or photo forwarded earlier carries an old challenge and is
+          rejected automatically as <code>remote_suspected</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ PAPER -->
+  <section class="panel" id="tab-paper">
+    <div class="card form-card wide">
+      <h2 data-i18n="paper.title">Import paper entries</h2>
+      <p class="hint" data-i18n="paper.hint">Copy one line from the paper backup sheet. Do not photograph the sheet; signatures are not stored.</p>
+      <div class="row">
+        <div><label for="pp-sheet" data-i18n="paper.sheet">Sheet ID</label><input id="pp-sheet" placeholder="P-T3-01"></div>
+        <div><label for="pp-line" data-i18n="paper.line">Line</label><input id="pp-line" type="number" min="1" value="1"></div>
+        <div><label for="pp-date" data-i18n="paper.date">Date on paper</label><input id="pp-date" type="date"></div>
+        <div><label for="pp-time" data-i18n="paper.time">Time on paper</label><input id="pp-time" type="time" step="60"></div>
+      </div>
+      <label data-i18n="paper.what">What happened</label>
+      <div class="seg" id="pp-type">
+        <button type="button" data-type="checkin" class="active" data-i18n="type.checkin">Check-in</button>
+        <button type="button" data-type="checkout" data-i18n="type.checkout">Check-out</button>
+        <button type="button" data-type="walkin" data-i18n="type.walkin">Walk-in</button>
+      </div>
+      <div id="pp-id-box">
+        <label for="pp-id" data-i18n="desk.label">Code or walk-in ID</label>
+        <input id="pp-id" class="code-input small" autocomplete="off" placeholder="ABC-123">
+      </div>
+      <div id="pp-walkin-box" hidden>
+        <div class="row">
+          <div><label for="pp-name" data-i18n="walkin.name">Name</label><input id="pp-name"></div>
+          <div><label for="pp-role" data-i18n="paper.role">Role</label>
+            <select id="pp-role"><option value="">–</option><option>gruen</option><option>gelb</option><option>rot</option></select></div>
+          <div><label for="pp-skill" data-i18n="paper.skill">Skill</label><input id="pp-skill"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="pp-consent"> <span data-i18n="paper.consent">Consent box is ticked on the paper</span></label>
+      </div>
+      <label class="check confirm"><input type="checkbox" id="pp-confirm">
+        <span data-i18n="paper.confirm">I have checked this line against the paper sheet and it is correct.</span></label>
+      <div class="actions"><button id="pp-submit" class="btn btn-in" data-i18n="paper.submit">Import confirmed line</button></div>
+      <div id="pp-feedback" class="feedback idle" role="status" aria-live="assertive"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ FINDER -->
+  <section class="panel" id="tab-finder">
+    <div class="card">
+      <h2 data-i18n="finder.title">Find a helper on site</h2>
+      <p class="hint" data-i18n="finder.hint">Search by skill in English or German, e.g. “nurse”, “Elektriker”, “truck driver”. Only people checked in right now are shown. This search never writes to the log.</p>
+      <div class="finder-bar">
+        <input id="f-q" class="filter finder-input" autocomplete="off" placeholder="nurse / Pflege …" data-i18n-ph="finder.ph">
+        <button id="f-go" class="btn btn-in" data-i18n="finder.search">Search</button>
+      </div>
+      <div class="chips" id="f-roles">
+        <span class="muted" data-i18n="finder.role">Role:</span>
+        <button type="button" class="chip active" data-role="" data-i18n="finder.all">All</button>
+        <button type="button" class="chip" data-role="rot"><span class="dot rot"></span>rot</button>
+        <button type="button" class="chip" data-role="gelb"><span class="dot gelb"></span>gelb</button>
+        <button type="button" class="chip" data-role="gruen"><span class="dot gruen"></span>gruen</button>
+      </div>
+      <div class="chips" id="f-quick">
+        <span class="muted" data-i18n="finder.quick">Quick:</span>
+        <button type="button" class="chip" data-q="medical" data-i18n="q.medical">Medical</button>
+        <button type="button" class="chip" data-q="electrician" data-i18n="q.electrician">Electrician</button>
+        <button type="button" class="chip" data-q="truck driver" data-i18n="q.driver">Driver</button>
+        <button type="button" class="chip" data-q="structural engineer" data-i18n="q.structural">Structural engineer</button>
+        <button type="button" class="chip" data-q="cook" data-i18n="q.cook">Cook</button>
+        <button type="button" class="chip" data-q="childcare" data-i18n="q.childcare">Childcare</button>
+        <button type="button" class="chip" data-q="lifeguard" data-i18n="q.lifeguard">Lifeguard</button>
+      </div>
+      <div id="f-summary" class="feedback idle"></div>
+      <table class="tbl"><thead><tr><th>ID</th><th data-i18n="col.name">Name</th><th data-i18n="col.role">Role</th>
+        <th data-i18n="col.skill">Skill</th><th data-i18n="col.skillsrc">Skill source</th><th data-i18n="col.since">Since</th></tr></thead>
+        <tbody id="f-results"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ============================================================ DASHBOARD -->
+  <section class="panel" id="tab-dash">
+    <div class="dash-grid">
+      <div class="card"><h3 data-i18n="dash.byrole">On site by role</h3><div id="by-role" class="bars"></div></div>
+      <div class="card"><h3 data-i18n="dash.byreason">Rejected attempts by reason</h3><div id="by-reason" class="bars"></div></div>
+      <div class="card span2"><h3 data-i18n="dash.active">Currently checked in</h3>
+        <table class="tbl"><thead><tr><th>ID</th><th data-i18n="col.name">Name</th><th data-i18n="col.role">Role</th>
+          <th data-i18n="col.skill">Skill</th><th data-i18n="col.since">Since</th></tr></thead>
+        <tbody id="dash-active"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ LOG -->
+  <section class="panel" id="tab-log">
+    <div class="card">
+      <div class="card-head"><h2 data-i18n="log.title">Signed activity log</h2>
+        <div><button id="log-verify" class="btn btn-small" data-i18n="log.verify">Verify chain now</button>
+             <button id="log-refresh" class="btn btn-small btn-ghost" data-i18n="log.refresh">Refresh</button>
+             <a class="btn btn-small btn-ghost" href="/api/log/download?format=jsonl" download data-i18n="log.dl.jsonl">Download signed log (.jsonl)</a>
+             <a class="btn btn-small btn-ghost" href="/api/log/download?format=csv" download data-i18n="log.dl.csv">Download table (.csv)</a></div></div>
+      <p class="hint" data-i18n="log.hint">Log entries are shown exactly as signed (format codes such as unknown_code stay in the official spelling).</p>
+      <div id="verify-result" class="feedback idle" hidden></div>
+      <table class="tbl"><thead><tr><th>#</th><th data-i18n="col.recorded">Recorded</th><th data-i18n="col.type">Type</th>
+        <th data-i18n="col.who">Who</th><th data-i18n="col.detail">Detail</th><th data-i18n="col.source">Source</th>
+        <th>Hash</th><th data-i18n="col.uploaded">Uploaded</th></tr></thead>
+        <tbody id="log-body"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ============================================================ SYNC -->
+  <section class="panel" id="tab-sync">
+    <div class="sync-grid">
+      <div class="card">
+        <h2 data-i18n="sync.title">Handover &amp; upload</h2>
+        <dl class="kv" id="sync-kv"></dl>
+        <div class="actions wrap">
+          <button id="sy-health" class="btn btn-small" data-i18n="sync.health">Test connection</button>
+          <button id="sy-check" class="btn btn-small" data-i18n="sync.check">Check log on server (dry run)</button>
+          <button id="sy-status" class="btn btn-small btn-ghost" data-i18n="sync.status">Server status</button>
+        </div>
+        <div class="actions">
+          <button id="sy-upload" class="btn btn-out" data-i18n="sync.upload">Write handover &amp; upload</button>
+          <button id="sy-upload-confirm" class="btn btn-danger" hidden data-i18n="sync.confirm">Confirm: upload now (counts for scoring)</button>
+        </div>
+        <div id="sy-feedback" class="feedback idle" role="status"></div>
+      </div>
+      <div class="card">
+        <h3 data-i18n="sync.findings">Server findings</h3>
+        <table class="tbl"><thead><tr><th>seq</th><th>code</th><th>level</th><th>detail</th></tr></thead>
+          <tbody id="sy-findings"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ READINESS -->
+  <section class="panel" id="tab-ready">
+    <div class="card">
+      <div class="card-head"><h2 data-i18n="ready.title">Station readiness</h2>
+        <div><button id="rd-refresh" class="btn btn-small btn-ghost" data-i18n="ready.refresh">Re-check</button>
+             <button id="rd-probe" class="btn btn-small" data-i18n="ready.probe">Re-check incl. server</button></div></div>
+      <ul id="ready-list" class="checks"></ul>
+    </div>
+  </section>
+</main>
+<script src="{{ url_for('static', filename='i18n.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

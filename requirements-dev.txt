@@ -1,0 +1,2 @@
+-r requirements.txt
+playwright>=1.45   # optional browser UI test (RESQ_UI_TESTS=1)

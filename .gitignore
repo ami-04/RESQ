@@ -1,0 +1,18 @@
+# secrets and live data: NEVER commit
+.env
+data/*/
+station_key.json
+*.torn-*
+*.pem
+# python / tooling
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.vscode/
+*.log
+
+# local outputs
+attack_b_out/
+.DS_Store

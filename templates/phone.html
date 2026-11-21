@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RESQ · Phone check-in pass</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="phone-body">
+  <div class="lang phone-lang" role="group" aria-label="Language / Sprache">
+    <button type="button" data-lang="en" class="active">EN</button><button type="button" data-lang="de">DE</button>
+  </div>
+  <div class="card form-card" id="ph-form">
+    <h2 data-i18n="ph.title">RESQ check-in pass</h2>
+    <p class="hint" data-i18n="ph.hint">Stand at the station. Type your personal code and the 4-character challenge
+      shown on the station screen right now. Nothing is sent anywhere: show the pass to the operator.</p>
+    <label for="ph-code" data-i18n="ph.code">Your code</label>
+    <input id="ph-code" class="code-input small" autocomplete="off" placeholder="ABC-123">
+    <label for="ph-ch" data-i18n="ph.ch">Challenge on the station screen</label>
+    <input id="ph-ch" class="code-input small" autocomplete="off" maxlength="6" placeholder="····">
+    <div class="actions"><button id="ph-go" class="btn btn-in" data-i18n="ph.go">Show my pass</button></div>
+  </div>
+  <div class="pass" id="ph-pass" hidden>
+    <div class="muted" data-i18n="ph.show">Show this to the operator</div>
+    <div class="pass-code" id="pass-code"></div>
+    <div class="pass-ch" id="pass-ch"></div>
+    <div class="muted" id="pass-time"></div>
+    <button id="ph-back" class="btn btn-ghost btn-small" data-i18n="ph.edit">Edit</button>
+  </div>
+<script src="{{ url_for('static', filename='i18n.js') }}"></script>
+<script src="{{ url_for('static', filename='phone.js') }}"></script>
+</body>
+</html>
